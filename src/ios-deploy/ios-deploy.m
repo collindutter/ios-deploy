@@ -85,6 +85,7 @@ bool interactive = true;
 bool justlaunch = false;
 char *app_path = NULL;
 char *device_id = NULL;
+NSString* corrected_device_id = NULL;
 char *args = NULL;
 char *list_root = NULL;
 int _timeout = 0;
@@ -691,8 +692,8 @@ void write_lldb_prep_cmds(AMDeviceRef device, CFURLRef disk_app_url) {
 
     NSString* python_command = @"fruitstrap_";
     if(device_id != NULL) {
-        python_file_path = [python_file_path stringByAppendingString:[NSString stringWithUTF8String:device_id]];
-        python_command = [python_command stringByAppendingString:[NSString stringWithUTF8String:device_id]];
+        python_file_path = [python_file_path stringByAppendingString:corrected_device_id];
+        python_command = [python_command stringByAppendingString:corrected_device_id];
     }
     python_file_path = [python_file_path stringByAppendingString:@".py"];
 
@@ -704,7 +705,7 @@ void write_lldb_prep_cmds(AMDeviceRef device, CFURLRef disk_app_url) {
     CFDataRef cmds_data = CFStringCreateExternalRepresentation(NULL, cmds, kCFStringEncodingUTF8, 0);
     NSString* prep_cmds_path = [NSString stringWithFormat:PREP_CMDS_PATH, tmpUUID];
     if(device_id != NULL) {
-        prep_cmds_path = [prep_cmds_path stringByAppendingString:[NSString stringWithUTF8String:device_id]];
+        prep_cmds_path = [prep_cmds_path stringByAppendingString:corrected_device_id];
     }
     FILE *out = fopen([prep_cmds_path UTF8String], "w");
     fwrite(CFDataGetBytePtr(cmds_data), CFDataGetLength(cmds_data), 1, out);
@@ -963,7 +964,7 @@ void launch_debugger(AMDeviceRef device, CFURLRef url) {
         lldb_shell = [NSString stringWithFormat:LLDB_SHELL, prep_cmds];
 
         if(device_id != NULL) {
-            lldb_shell = [lldb_shell stringByAppendingString: [NSString stringWithUTF8String:device_id]];
+            lldb_shell = [lldb_shell stringByAppendingString: corrected_device_id];
         }
 
         int status = system([lldb_shell UTF8String]); // launch lldb
@@ -1002,7 +1003,7 @@ void launch_debugger_and_exit(AMDeviceRef device, CFURLRef url) {
         NSString* prep_cmds = [NSString stringWithFormat:PREP_CMDS_PATH, tmpUUID];
         NSString* lldb_shell = [NSString stringWithFormat:LLDB_SHELL, prep_cmds];
         if(device_id != NULL) {
-            lldb_shell = [lldb_shell stringByAppendingString:[NSString stringWithUTF8String:device_id]];
+            lldb_shell = [lldb_shell stringByAppendingString:corrected_device_id];
         }
 
         int status = system([lldb_shell UTF8String]); // launch lldb
@@ -1524,6 +1525,7 @@ void handle_device(AMDeviceRef device) {
         }
     } else {
         device_id = MYCFStringCopyUTF8String(found_device_id);
+        corrected_device_id = [[NSString stringWithUTF8String:device_id] stringByReplacingOccurrencesOfString: @"-" withString:@"_"];
         found_device = true;
     }
 
